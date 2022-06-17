@@ -10,12 +10,12 @@ Parameters:
   InstanceType:
     Description: Which instance type should we use to build the ECS cluster?
     Type: String
-    Default: c4.large
+    Default: t2.micro
 
   ClusterSize:
     Description: How many ECS hosts do you want to initially deploy?
     Type: Number
-    Default: 4
+    Default: 1
 
   VPC:
     Description: Choose which VPC this ECS cluster should be deployed to
@@ -39,91 +39,14 @@ Resources:
     Type: AWS::ECS::Cluster
     Properties:
       ClusterName: !Ref EnvironmentName
-
-  ECSAutoScalingGroup:
-    DependsOn: ECSCluster
-    Type: AWS::AutoScaling::AutoScalingGroup
-    Properties:
-      VPCZoneIdentifier: !Ref Subnets
-      LaunchConfigurationName: !Ref ECSLaunchConfiguration
-      MinSize: !Ref ClusterSize
-      MaxSize: !Ref ClusterSize
-      DesiredCapacity: !Ref ClusterSize
-      Tags:
-        - Key: Name
-          Value: !Sub ${EnvironmentName} ECS host
-          PropagateAtLaunch: true
-    CreationPolicy:
-      ResourceSignal:
-        Timeout: PT15M
-    UpdatePolicy:
-      AutoScalingRollingUpdate:
-        MinInstancesInService: 1
-        MaxBatchSize: 1
-        PauseTime: PT15M
-        SuspendProcesses:
-          - HealthCheck
-          - ReplaceUnhealthy
-          - AZRebalance
-          - AlarmNotification
-          - ScheduledActions
-        WaitOnResourceSignals: true
-
-  ECSLaunchConfiguration:
-    Type: AWS::AutoScaling::LaunchConfiguration
-    Properties:
-      ImageId: !Ref ECSAMI
-      InstanceType: !Ref InstanceType
-      SecurityGroups:
-        - !Ref SecurityGroup
-      IamInstanceProfile: !Ref ECSInstanceProfile
-      UserData:
-        "Fn::Base64": !Sub |
-          #!/bin/bash
-          yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
-          yum install -y https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
-          yum install -y aws-cfn-bootstrap hibagent 
-          /opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource ECSLaunchConfiguration
-          /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource ECSAutoScalingGroup
-          /usr/bin/enable-ec2-spot-hibernation
-
-    Metadata:
-      AWS::CloudFormation::Init:
-        config:
-          packages:
-            yum:
-              collectd: []
-
-          commands:
-            01_add_instance_to_cluster:
-              command: !Sub echo ECS_CLUSTER=${ECSCluster} >> /etc/ecs/ecs.config
-            02_enable_cloudwatch_agent:
-              command: !Sub /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c ssm:${ECSCloudWatchParameter} -s
-          files:
-            /etc/cfn/cfn-hup.conf:
-              mode: 000400
-              owner: root
-              group: root
-              content: !Sub |
-                [main]
-                stack=${AWS::StackId}
-                region=${AWS::Region}
-
-            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
-              content: !Sub |
-                [cfn-auto-reloader-hook]
-                triggers=post.update
-                path=Resources.ECSLaunchConfiguration.Metadata.AWS::CloudFormation::Init
-                action=/opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource ECSLaunchConfiguration
-
-          services:
-            sysvinit:
-              cfn-hup:
-                enabled: true
-                ensureRunning: true
-                files:
-                  - /etc/cfn/cfn-hup.conf
-                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+      CapacityProviders:
+        - FARGATE
+        - FARGATE_SPOT
+      DefaultCapacityProviderStrategy:
+        - CapacityProvider: FARGATE
+          Weight: 1
+        - CapacityProvider: FARGATE_SPOT
+          Weight: 1
 
   # This IAM Role is attached to all of the ECS hosts. It is based on the default role
   # published here:
@@ -301,7 +224,4 @@ Outputs:
   ECSServiceAutoScalingRole:
     Description: A reference to ECS service auto scaling role
     Value: !GetAtt ECSServiceAutoScalingRole.Arn
-
-  ECSAutoScalingGroupName:
-    Description: A reference to ECS AutoScaling Group Name
-    Value: !Ref ECSAutoScalingGroup
+    

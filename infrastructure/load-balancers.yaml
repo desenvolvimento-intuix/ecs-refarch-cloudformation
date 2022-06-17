@@ -23,7 +23,7 @@ Resources:
   LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Name: !Ref EnvironmentName
+      Name: !Sub ${EnvironmentName}-rabbitmq
       Subnets: !Ref Subnets
       SecurityGroups:
         - !Ref SecurityGroup
@@ -31,7 +31,7 @@ Resources:
         - Key: Name
           Value: !Ref EnvironmentName
 
-  LoadBalancerListener:
+  DefaultLoadBalancerListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       LoadBalancerArn: !Ref LoadBalancer
@@ -49,10 +49,18 @@ Resources:
     Properties:
       Name: !Sub ${EnvironmentName}-default
       VpcId: !Ref VPC
+      TargetType: ip
       Port: 80
       Protocol: HTTP
 
+  PrivateNamespace:
+    Type: AWS::ServiceDiscovery::PrivateDnsNamespace
+    Properties:
+        Name: local
+        Vpc: !Ref VPC
+
 Outputs:
+
   LoadBalancer:
     Description: A reference to the Application Load Balancer
     Value: !Ref LoadBalancer
@@ -63,4 +71,8 @@ Outputs:
 
   Listener:
     Description: A reference to a port 80 listener
-    Value: !Ref LoadBalancerListener
+    Value: !Ref DefaultLoadBalancerListener
+
+  PrivateNamespace:
+    Description: A reference to a port 80 listener
+    Value: !Ref PrivateNamespace

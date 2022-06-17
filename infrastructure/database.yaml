@@ -1,0 +1,156 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: A basic CFN template to create an Aurora DB cluster
+
+Parameters:
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+
+  SecurityGroup:
+    Description: Security Group Name used by Aurora DB
+    Type: AWS::EC2::SecurityGroup::Id
+
+  DBStorage:
+    Description: The database name for Aurora PostgreSQL DB instance
+    Type: String
+
+  DBName:
+    Description: The database name for Aurora PostgreSQL DB instance
+    Type: String
+
+  DBMasterUsername:
+    Description: The database master/super username.
+    Type: String
+
+  DBMasterUserPassword:
+    Description: The password for database master/super user.
+    Type: String
+    NoEcho: "true"
+
+  DBInstanceClass:
+    Description: Database instance class
+    Type: String
+
+  SubnetId1:
+    Description: Subnet ID in 1st AZ of your region
+    Type: String
+
+  SubnetId2:
+    Description: Subnet ID in 2nd AZ of your region
+    Type: String
+
+  SubnetId3:
+    Description: Subnet ID in 2nd AZ of your region
+    Type: String
+
+  SubnetId4:
+    Description: Subnet ID in 2nd AZ of your region
+    Type: String
+
+  EnablePerformanceInsights:
+    Description: A value that indicates whether to enable Performance Insights for the DB instance.
+    Type: String
+    Default: false
+
+  MultiAZ:
+    Description: true, in case you wish to have a multi-AZ deployment
+    Type: String
+    Default: false
+
+  PublicAccess:
+    Description: true, in case you wish to have a multi-AZ deployment
+    Type: String
+    Default: true
+
+Resources:
+  DBCluster:
+    DependsOn:
+      - DBSubnetGroup
+      - DBClusterPG
+    Type: AWS::RDS::DBCluster
+    Properties:
+      BackupRetentionPeriod: 1
+      DBClusterIdentifier: auroracluster
+      DBClusterParameterGroupName: !Ref DBClusterPG
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      DatabaseName: !Ref DBName
+      DeletionProtection: false
+      Engine: aurora-postgresql
+      EngineMode: provisioned
+      EngineVersion: 13.4
+      MasterUserPassword: !Ref DBMasterUserPassword
+      MasterUsername: !Ref DBMasterUsername
+      Port: 5432
+      SourceRegion: !Ref 'AWS::Region'
+      StorageEncrypted: true
+      VpcSecurityGroupIds:
+        - Ref: SecurityGroup
+    
+  DBClusterPG:
+    Type: AWS::RDS::DBClusterParameterGroup
+    Properties:
+      Description: DB Cluster Parameter Group for your Aurora DB cluster
+      Family: aurora-postgresql13
+      Parameters:
+        rds.logical_replication: 1
+        
+  DBParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Tags:
+        - Key: "Name"
+          Value: myrdsdbparametergroup
+      Description: Database Parameter Group for your Aurora DB Instnace
+      Family: aurora-postgresql13
+      Parameters:
+        shared_preload_libraries: "pg_stat_statements, pg_hint_plan"
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      Tags:
+        - Key: "Name"
+          Value: dbsubnetgroup
+      DBSubnetGroupDescription: An appropriate description for your DB subnet group.
+      DBSubnetGroupName: dbsubnetgroup
+      SubnetIds:
+        - Ref: SubnetId1
+        - Ref: SubnetId2
+        - Ref: SubnetId3
+        - Ref: SubnetId4
+
+  DBInstance:
+    DependsOn:
+      - DBSubnetGroup
+      - DBParameterGroup
+      - DBCluster
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Tags:
+        - Key: "Name"
+          Value: cosecurity
+      DBInstanceIdentifier:  !Sub ${EnvironmentName}-postgresdb
+      DBClusterIdentifier: !Ref DBCluster
+      DBInstanceClass:
+        Ref: DBInstanceClass
+      Engine: aurora-postgresql
+      EngineVersion: 13.4
+      DBParameterGroupName:
+        Ref: DBParameterGroup
+      EnablePerformanceInsights:
+        Ref: EnablePerformanceInsights
+      AutoMinorVersionUpgrade: true
+      PubliclyAccessible: !Ref PublicAccess
+
+Outputs:
+  RDSEndpoint:
+    Description: RDS Database Endpoint
+    Value:
+      Fn::GetAtt:
+        - DBInstance
+        - Endpoint.Address
+    Export:
+      Name:
+        Fn::Sub: "RDSEndpoint"

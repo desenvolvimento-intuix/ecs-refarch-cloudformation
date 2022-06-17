@@ -20,6 +20,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       VpcId: !Ref VPC
+      GroupName: ecs-hosts-sg
       GroupDescription: Access to the ECS hosts and the tasks/containers that run on them
       SecurityGroupIngress:
         # Only allow inbound access to ECS from the ELB
@@ -36,6 +37,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       VpcId: !Ref VPC
+      GroupName: loadbalancer-sg
       GroupDescription: Access to the load balancer that sits in front of ECS
       SecurityGroupIngress:
         # Allow access from anywhere to our ECS services
@@ -45,6 +47,48 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName}-LoadBalancers
 
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPC
+      GroupName: database-sg
+      GroupDescription: Access to the Aurora postgres that sits in front of ECS
+      SecurityGroupIngress:
+        # Allow access from anywhere to our ECS services
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-database
+
+  RabbitMqSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: rabbitmq-sg
+      VpcId: !Ref VPC
+      GroupDescription: Access to the Aurora postgres that sits in front of ECS
+      SecurityGroupIngress:
+        # Allow access from anywhere to our rabbitmq write services
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 5672
+          ToPort: 5672
+        # Allow access from anywhere to our rabbitmq ui services
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 15672
+          ToPort: 15672
+        # Allow access from anywhere to our rabbitmq ui services
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName}-rabbitmq
+
 Outputs:
   ECSHostSecurityGroup:
     Description: A reference to the security group for ECS hosts
@@ -53,3 +97,11 @@ Outputs:
   LoadBalancerSecurityGroup:
     Description: A reference to the security group for load balancers
     Value: !Ref LoadBalancerSecurityGroup
+
+  DatabaseSecurityGroup:
+    Description: A reference to the security group for database
+    Value: !Ref DatabaseSecurityGroup
+
+  RabbitMqSecurityGroup:
+    Description: A reference to the security group for database
+    Value: !Ref RabbitMqSecurityGroup
