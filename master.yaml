@@ -61,28 +61,28 @@ Resources:
         SecurityGroup: !GetAtt SecurityGroups.Outputs.ECSHostSecurityGroup
         Subnets: !GetAtt VPC.Outputs.PrivateSubnets
 
-  # Database:
-  #   DependsOn:
-  #     - VPC
-  #     - ECS
-  #     - ALB
-  #     - SecurityGroups
-  #   Type: AWS::CloudFormation::Stack
-  #   Properties:
-  #     TemplateURL: https://s3.amazonaws.com/intuix-infrastructure/infrastructure/database.yaml
-  #     Parameters:
-  #       EnvironmentName: !Ref AWS::StackName
-  #       SecurityGroup: !GetAtt SecurityGroups.Outputs.DatabaseSecurityGroup
-  #       DBStorage: 20
-  #       DBName: !Ref DBName
-  #       DBMasterUsername: !Ref DBMasterUsername
-  #       DBMasterUserPassword: !Ref DBMasterUserPassword
-  #       DBInstanceClass: db.t3.medium
-  #       SubnetId1: !GetAtt VPC.Outputs.PrivateSubnet2
-  #       SubnetId2: !GetAtt VPC.Outputs.PrivateSubnet1
-  #       SubnetId3: !GetAtt VPC.Outputs.PublicSubnet2
-  #       SubnetId4: !GetAtt VPC.Outputs.PublicSubnet1
-  #       PublicAccess: true
+  Database:
+    DependsOn:
+      - VPC
+      - ECS
+      - ALB
+      - SecurityGroups
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.amazonaws.com/intuix-infrastructure/infrastructure/database.yaml
+      Parameters:
+        EnvironmentName: !Ref AWS::StackName
+        SecurityGroup: !GetAtt SecurityGroups.Outputs.DatabaseSecurityGroup
+        DBStorage: 20
+        DBName: !Ref DBName
+        DBMasterUsername: !Ref DBMasterUsername
+        DBMasterUserPassword: !Ref DBMasterUserPassword
+        DBInstanceClass: db.t3.medium
+        SubnetId1: !GetAtt VPC.Outputs.PrivateSubnet2
+        SubnetId2: !GetAtt VPC.Outputs.PrivateSubnet1
+        SubnetId3: !GetAtt VPC.Outputs.PublicSubnet2
+        SubnetId4: !GetAtt VPC.Outputs.PublicSubnet1
+        PublicAccess: true
 
 
 
