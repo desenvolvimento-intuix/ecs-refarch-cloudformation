@@ -5,7 +5,7 @@ Help()
 {
    # Display Help
    echo "PARAMETER 1 : database script name "
-   echo "PARAMETER 2 : cosecurity user password "
+   echo "PARAMETER 2 : intuix user password "
    echo "SYNTAX : sh ./scripts/deploy.sh 'script_name' 'password' "
 }
 
@@ -18,8 +18,7 @@ while getopts ":h" option; do
 done
 
 #upload files in S3
-aws s3 sync . s3://cluster-infrastructure  --profile cosecurity \
-                                           --exclude 'scripts/deploy/.env.json' \
+aws s3 sync . s3://intuix-infrastructure  --exclude 'scripts/deploy/.env.json' \
                                            --exclude '.git/*' \
                                            --exclude '.gitignore' \
                                            --exclude 'README.md'
@@ -28,9 +27,8 @@ aws s3 sync . s3://cluster-infrastructure  --profile cosecurity \
 # #deploy template on cloudformation
 aws cloudformation deploy \
     --template-file ./master.yaml \
-    --stack-name cosecurity-cluster \
+    --stack-name intuix-cluster \
     --capabilities CAPABILITY_NAMED_IAM \
-    --profile cosecurity \
     --parameter-overrides file://./scripts/deploy/.env.json
     
 

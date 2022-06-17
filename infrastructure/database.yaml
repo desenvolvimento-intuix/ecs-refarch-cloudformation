@@ -130,7 +130,7 @@ Resources:
     Properties:
       Tags:
         - Key: "Name"
-          Value: cosecurity
+          Value: intuix
       DBInstanceIdentifier:  !Sub ${EnvironmentName}-postgresdb
       DBClusterIdentifier: !Ref DBCluster
       DBInstanceClass:
